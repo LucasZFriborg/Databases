@@ -1,104 +1,108 @@
 USE everyloop;
 GO
 
+drop table if exists SuccessfulMissions;
+drop table if exists NewUsers;
+GO
+
 -- MoonMissions
-select
+SELECT
     [Spacecraft],
     [Launch date],
     [Carrier rocket],
     [Operator],
     [Mission type]
-INTO SuccessfulMissions
-FROM dbo.MoonMissions
+into SuccessfulMissions
+from dbo.MoonMissions
 where Outcome = 'Successful';
 GO
 
-select TOP 10 *
-FROM SuccessfulMissions;
+SELECT top 10 *
+from SuccessfulMissions;
 GO
 
 UPDATE SuccessfulMissions
-SET Operator = TRIM(Operator);
+set Operator = TRIM(Operator);
 GO
 
-select TOP 20 Operator
-FROM SuccessfulMissions;
+SELECT top 20 Operator
+from SuccessfulMissions;
 GO
 
 -- Users
-select
+SELECT
     ID,
     UserName,
     Password,
-    FirstName + ' ' + LastName AS Name,
+    FirstName + ' ' + LastName as Name,
     Email,
     Phone,
-    CASE
-        WHEN CAST(SUBSTRING(ID, LEN(ID) - 1, 1) AS INT) % 2 = 0
-            THEN 'Female'
-        ELSE 'Male'
-    END AS Gender
-INTO NewUsers
-FROM dbo.Users;
+    case
+        when CAST(SUBSTRING(ID, LEN(ID) - 1, 1) as int) % 2 = 0
+            then 'Female'
+        else 'Male'
+    end as Gender
+into NewUsers
+from dbo.Users;
 GO
 
-select TOP 20 *
-FROM NewUsers;
+SELECT top 20 *
+from NewUsers;
 GO
 
-select
+SELECT
     UserName,
-    Count(*) AS DuplicateCount
+    Count(*) as DuplicateCount
 from NewUsers
-GROUP BY UserName
-HAVING COUNT(*) > 1;
+group by UserName
+having COUNT(*) > 1;
 GO
 
-select
+SELECT
     ID,
     UserName
 from NewUsers
-WHERE UserName IN (
+where UserName in (
     select UserName
-    FROM NewUsers
-    GROUP BY UserName
-    HAVING COUNT(*) > 1
+    from NewUsers
+    group by UserName
+    having COUNT(*) > 1
 );
 GO
 
-WITH Duplicates AS (
-    Select
+WITH Duplicates as (
+    select
         ID,
         UserName,
-        ROW_NUMBER() OVER (
-            PARTITION by UserName
-            ORDER BY ID
-        ) AS RowNumber
+        ROW_NUMBER() over (
+            partition by UserName
+            order by ID
+        ) as RowNumber
     from NewUsers
 )
-UPDATE Duplicates
-SET UserName = LEFT(UserName, LEN(UserName) - 2)
-                + CAST(RowNumber AS varchar)
-Where RowNumber > 1;
+update Duplicates
+set UserName = LEFT(UserName, LEN(UserName) - 2)
+                + CAST(RowNumber as varchar)
+where RowNumber > 1;
 GO
 
-select
+SELECT
     UserName,
-    count(*) AS DuplicateCount
-FROM NewUsers
-GROUP BY UserName
-HAVING count(*) > 1
+    count(*) as DuplicateCount
+from NewUsers
+group by UserName
+having count(*) > 1;
 GO
 
 DELETE from NewUsers
-WHERE Gender = 'Female'
-and CAST(LEFT(ID, 2) AS INT) < 70;
+where Gender = 'Female'
+and CAST(LEFT(ID, 2) as int) < 70;
 GO
 
 SELECT top 20 *
 from NewUsers
 where Gender = 'Female'
-and CAST(LEFT(ID, 2) AS INT) < 70;
+and CAST(LEFT(ID, 2) as int) < 70;
 GO
 
 insert into NewUsers (
@@ -110,7 +114,7 @@ insert into NewUsers (
     Phone,
     Gender
 )
-VALUES (
+values (
     '010180-1234',
     'lucrog',
     'Zapp1980',
@@ -121,7 +125,33 @@ VALUES (
 );
 GO
 
-select *
+SELECT *
 from NewUsers
 where UserName = 'lucrog';
+GO
+
+-- Company (Joins)
+SELECT
+    company.products.ID as Id,
+    company.products.ProductName as Product,
+    company.suppliers.CompanyName as Supplier,
+    company.categories.CategoryName as Category
+from company.products
+join company.suppliers
+    on company.products.SupplierId = company.suppliers.ID
+join company.categories
+    on company.products.CategoryId = company.categories.ID;
+GO
+
+SELECT
+    company.regions.RegionDescription,
+    COUNT(distinct company.employees.ID) as EmployeeCount
+from company.employees
+join company.employee_territory
+    on company.employees.ID = company.employee_territory.EmployeeId
+join company.territories
+    on company.employee_territory.TerritoryId = company.territories.ID
+join company.regions
+    on company.territories.RegionId = company.regions.ID
+group by company.regions.RegionDescription;
 GO

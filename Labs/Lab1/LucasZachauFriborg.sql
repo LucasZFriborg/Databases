@@ -1,8 +1,8 @@
 USE everyloop;
 GO
 
-drop table if exists SuccessfulMissions;
-drop table if exists NewUsers;
+DROP TABLE IF EXISTS SuccessfulMissions;
+DROP TABLE IF EXISTS NewUsers;
 GO
 
 -- MoonMissions
@@ -12,21 +12,35 @@ SELECT
     [Carrier rocket],
     [Operator],
     [Mission type]
-into SuccessfulMissions
-from dbo.MoonMissions
-where Outcome = 'Successful';
+INTO SuccessfulMissions
+FROM dbo.MoonMissions
+WHERE Outcome = 'Successful';
 GO
 
 SELECT top 10 *
-from SuccessfulMissions;
+FROM SuccessfulMissions;
 GO
 
 UPDATE SuccessfulMissions
-set Operator = TRIM(Operator);
+SET Operator = TRIM(Operator);
 GO
 
-SELECT top 20 Operator
-from SuccessfulMissions;
+SELECT TOP 20 Operator
+FROM SuccessfulMissions;
+GO
+
+SELECT
+    Operator,
+    [Mission type],
+    COUNT(*) AS [Mission count]
+FROM SuccessfulMissions
+GROUP BY
+    Operator,
+    [Mission type]
+HAVING COUNT(*) > 1
+ORDER BY
+    Operator,
+    [Mission type];
 GO
 
 -- Users
@@ -34,78 +48,78 @@ SELECT
     ID,
     UserName,
     Password,
-    FirstName + ' ' + LastName as Name,
+    FirstName + ' ' + LastName AS Name,
     Email,
     Phone,
-    case
-        when CAST(SUBSTRING(ID, LEN(ID) - 1, 1) as int) % 2 = 0
-            then 'Female'
-        else 'Male'
-    end as Gender
-into NewUsers
-from dbo.Users;
+    CASE
+        WHEN CAST(SUBSTRING(ID, LEN(ID) - 1, 1) AS INT) % 2 = 0
+            THEN 'Female'
+        ELSE 'Male'
+    END AS Gender
+INTO NewUsers
+FROM dbo.Users;
 GO
 
-SELECT top 20 *
-from NewUsers;
+SELECT TOP 20 *
+FROM NewUsers;
 GO
 
 SELECT
     UserName,
-    Count(*) as DuplicateCount
-from NewUsers
-group by UserName
-having COUNT(*) > 1;
+    Count(*) AS DuplicateCount
+FROM NewUsers
+GROUP BY UserName
+HAVING COUNT(*) > 1;
 GO
 
 SELECT
     ID,
     UserName
-from NewUsers
-where UserName in (
-    select UserName
-    from NewUsers
-    group by UserName
-    having COUNT(*) > 1
+FROM NewUsers
+WHERE UserName IN (
+    SELECT UserName
+    FROM NewUsers
+    GROUP BY UserName
+    HAVING COUNT(*) > 1
 );
 GO
 
-WITH Duplicates as (
-    select
+WITH Duplicates AS (
+    SELECT
         ID,
         UserName,
-        ROW_NUMBER() over (
-            partition by UserName
-            order by ID
-        ) as RowNumber
-    from NewUsers
+        ROW_NUMBER() OVER (
+            PARTITION BY UserName
+            ORDER BY ID
+        ) AS RowNumber
+    FROM NewUsers
 )
-update Duplicates
-set UserName = LEFT(UserName, LEN(UserName) - 2)
-                + CAST(RowNumber as varchar)
-where RowNumber > 1;
+UPDATE Duplicates
+SET UserName = LEFT(UserName, LEN(UserName) - 2)
+                + CAST(RowNumber AS VARCHAR)
+WHERE RowNumber > 1;
 GO
 
 SELECT
     UserName,
-    count(*) as DuplicateCount
-from NewUsers
-group by UserName
-having count(*) > 1;
+    count(*) AS DuplicateCount
+FROM NewUsers
+GROUP BY UserName
+HAVING count(*) > 1;
 GO
 
-DELETE from NewUsers
-where Gender = 'Female'
-and CAST(LEFT(ID, 2) as int) < 70;
+DELETE FROM NewUsers
+WHERE Gender = 'Female'
+AND CAST(LEFT(ID, 2) AS INT) < 70;
 GO
 
-SELECT top 20 *
-from NewUsers
-where Gender = 'Female'
-and CAST(LEFT(ID, 2) as int) < 70;
+SELECT TOP 20 *
+FROM NewUsers
+WHERE Gender = 'Female'
+AND CAST(LEFT(ID, 2) AS INT) < 70;
 GO
 
-insert into NewUsers (
+INSERT INTO NewUsers (
     ID,
     UserName,
     Password,
@@ -114,7 +128,7 @@ insert into NewUsers (
     Phone,
     Gender
 )
-values (
+VALUES (
     '010180-1234',
     'lucrog',
     'Zapp1980',
@@ -126,32 +140,32 @@ values (
 GO
 
 SELECT *
-from NewUsers
-where UserName = 'lucrog';
+FROM NewUsers
+WHERE UserName = 'lucrog';
 GO
 
 -- Company (Joins)
 SELECT
-    company.products.ID as Id,
-    company.products.ProductName as Product,
-    company.suppliers.CompanyName as Supplier,
-    company.categories.CategoryName as Category
-from company.products
-join company.suppliers
-    on company.products.SupplierId = company.suppliers.ID
-join company.categories
-    on company.products.CategoryId = company.categories.ID;
+    company.products.ID AS Id,
+    company.products.ProductName AS Product,
+    company.suppliers.CompanyName AS Supplier,
+    company.categories.CategoryName AS Category
+FROM company.products
+JOIN company.suppliers
+    ON company.products.SupplierId = company.suppliers.ID
+JOIN company.categories
+    ON company.products.CategoryId = company.categories.ID;
 GO
 
 SELECT
     company.regions.RegionDescription,
-    COUNT(distinct company.employees.ID) as EmployeeCount
-from company.employees
-join company.employee_territory
-    on company.employees.ID = company.employee_territory.EmployeeId
-join company.territories
-    on company.employee_territory.TerritoryId = company.territories.ID
-join company.regions
-    on company.territories.RegionId = company.regions.ID
-group by company.regions.RegionDescription;
+    COUNT(DISTINCT company.employees.ID) AS EmployeeCount
+FROM company.employees
+JOIN company.employee_territory
+    ON company.employees.ID = company.employee_territory.EmployeeId
+JOIN company.territories
+    ON company.employee_territory.TerritoryId = company.territories.ID
+JOIN company.regions
+    ON company.territories.RegionId = company.regions.ID
+GROUP BY company.regions.RegionDescription;
 GO
